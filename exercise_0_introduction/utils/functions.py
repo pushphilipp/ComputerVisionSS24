@@ -19,7 +19,11 @@ def show_images(images: t_image_list, names: t_str_list) -> None:
     Returns:
         None
     """
-    raise NotImplementedError
+    for i, (img, name) in enumerate(zip(images, names)):
+        cv2.imshow(name, img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
 
 def save_images(images: t_image_list, filenames: t_str_list, **kwargs) -> None:
     """Saves one or more images at once.
@@ -34,7 +38,8 @@ def save_images(images: t_image_list, filenames: t_str_list, **kwargs) -> None:
     Returns:
         None
     """
-    raise NotImplementedError
+    for img, filename in zip(images, filenames):
+        cv2.imwrite(filename, img)
 
 def scale_down(image: np.array) -> np.array:
     """Returns an image half the size of the original.
@@ -45,7 +50,7 @@ def scale_down(image: np.array) -> np.array:
     Returns:
         A numpy array with an opencv image half the size of the original image
     """
-    raise NotImplementedError
+    return cv2.resize(image, (0,0), fx=0.5, fy=0.5)
 
 def separate_channels(colored_image: np.array) -> t_image_triplet:
     """Takes an BGR color image and splits it three images.
@@ -57,4 +62,16 @@ def separate_channels(colored_image: np.array) -> t_image_triplet:
         A tuple with three BGR images the first one containing only the Blue channel active, the second one only the
         green, and the third one only the red.
     """
-    raise NotImplementedError
+    blue = colored_image.copy()
+    blue[:,:,1] = 0
+    blue[:,:,2] = 0
+
+    green = colored_image.copy()
+    green[:,:,0] = 0
+    green[:,:,2] = 0
+
+    red = colored_image.copy()
+    red[:,:,0] = 0
+    red[:,:,1] = 0
+
+    return blue, green, red

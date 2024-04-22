@@ -4,12 +4,16 @@ version = "0.1.0"
 description = ""
 authors = ["pushphilipp <76959263+pushphilipp@users.noreply.github.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.9"
+opencv-python = "^4.9.0.80"
+pytest = "^8.1.1"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
 
