@@ -1,2 +1,2 @@
 # ComputerVisionSS24
-# ComputerVisionSS24
+My Exercise Solutions
