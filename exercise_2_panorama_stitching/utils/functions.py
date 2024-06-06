@@ -71,8 +71,17 @@ def extract_features(img: t_img, num_features: int = 500) -> Tuple[t_points, t_d
     Returns:
         A tuple containing a numpy array of [N x 2] and numpy array of [N x 32]
     """
-    #TODO : Hint - you will need cv2.ORB_create
-    raise NotImplementedError
+    # step 1: create an ORB object (1 line)
+    orb = cv2.ORB_create(nfeatures=num_features)
+
+    # step 2: detect key-points and compute descriptors (1 line)
+    key_points, descriptors = orb.detectAndCompute(img, None)
+
+    # step 3: extract the locations of the key-points (1 line)
+    # pt returns x, y coordinates of the key-points
+    points = np.array([kp.pt for kp in key_points], dtype='float32')
+
+    return points, descriptors
 
 
 def filter_and_align_descriptors(f1: Tuple[t_points, t_descriptors], f2: Tuple[t_points, t_descriptors],
@@ -100,21 +109,23 @@ def filter_and_align_descriptors(f1: Tuple[t_points, t_descriptors], f2: Tuple[t
     assert f1[1].shape[1] == f2[1].shape[1] == 32  # points size
 
     # step 1: compute distance matrix (1 to 8 lines)
+    distance_matrix = spatial.distance.cdist(f1[1], f2[1], similarity_metric)
 
 
     # step 2: computing the indexes of src dst so that src[src_idx,:] and dst[dst,:] refer to matching points.
+    nn1_idx = np.argmin(distance_matrix, axis=1)
 
 
     # step 3: find a boolean index of the matched pairs that is true only if a match was significant.
     # A match is considered significant if the ratio of its distance to the second best is lower than a given
     # threshold.
     # Hint: use the previously computed distance matrix to find the second best match.
-
-
+    nn2_idx = np.argsort(distance_matrix, axis=1)[:, 1]
+    nn1_distance = distance_matrix[np.arange(len(nn1_idx)), nn1_idx]
+    nn2_distance = distance_matrix[np.arange(len(nn2_idx)), nn2_idx]
+    significant_matches = nn1_distance < similarity_threshold * nn2_distance
     # step 4: removing non-significant matches and return the aligned points (their location only!)
-
-    raise NotImplementedError
-
+    return f1[0][significant_matches], f2[0][nn1_idx[significant_matches]]
 
 def compute_homography(f1: np.array, f2: np.array) -> np.array:
     """Computes the homography matrix given matching points.
@@ -133,16 +144,24 @@ def compute_homography(f1: np.array, f2: np.array) -> np.array:
     homography_matrix = np.zeros((3, 3))
     assert f1.shape[0] == f1.shape[0] >= 4
 
-    # TODO 3
-    # - Construct the (>=8) x 9 matrix A.
-    # - Use the formula from the exercise sheet.
-    # - Note that every match contributes to exactly two rows of the matrix.
-    # - Extract the homogeneous solution of Ah=0 as the rightmost column vector of V.
-    # - Store the result in H.
-    # - Normalize H
-    # Hint: No loops are needed but up to to 2 nested loops might make the solution easier.
+    # - Construct the Homography matrix H using the points in f1 and f2.
+    A = np.zeros((2 * f1.shape[0], 9))
+    for i in range(f1.shape[0]):
+        x, y = f1[i]
+        x_, y_ = f2[i]
+        A[2 * i] = [-x, -y, -1, 0, 0, 0, x * x_, y * x_, x_]
+        A[2 * i + 1] = [0, 0, 0, -x, -y, -1, x * y_, y * y_, y_]
 
-    raise NotImplementedError
+    # - Compute the Singular Value Decomposition of A.
+    U, S, V = np.linalg.svd(A)
+    # - Extract the homogeneous solution of Ah=0 as the rightmost column vector of V.
+    homography_matrix = V[-1].reshape(3, 3)
+
+    # - Store the result in H.
+    H = homography_matrix
+    # - Normalize H
+    homography_matrix = H / H[2, 2]
+
     return homography_matrix
 
 
@@ -166,19 +185,25 @@ def _get_inlier_count(src_points: np.array, dst_points: np.array, homography: np
     assert src_points.shape[0] == dst_points.shape[0]
 
     # step 1: create normalized coordinates for points (maybe [x, y] --> [x, y, 1]) (4 lines)
+    src_points = np.hstack((src_points, np.ones((src_points.shape[0], 1))))
+    dst_points = np.hstack((dst_points, np.ones((dst_points.shape[0], 1))))
+
 
 
     # step 2: project the image points from image 1 to image 2 using the homography (1 line)
     # Hint: You can use np.dot here
+    projected_points = np.dot(homography, src_points.T).T
+
 
 
     # step 3: re-normalize the projected points ([x, y, l] --> [x/l, y/l]) (1 line)
+    projected_points = projected_points[:, :2] / projected_points[:, 2][:, None]
+
 
 
     # step 4: compute and return number of inliers (3 lines)
-    # Hint: You might use np.linalg.norm
-
-    raise NotImplementedError
+    distances = np.linalg.norm(projected_points - dst_points[:, :2], axis=1)
+    return np.sum(distances < distance_threshold)
 
 
 def ransac(src_features: Tuple[t_points, t_descriptors], dst_features: Tuple[t_points, t_descriptors], steps,
