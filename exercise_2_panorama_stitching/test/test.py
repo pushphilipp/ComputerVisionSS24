@@ -1,5 +1,5 @@
 import sys
-sys.path.append(".")
+sys.path.append("/Users/Philipp/git/ComputerVisionSS24/exercise_2_panorama_stitching")
 
 import re
 import pytest
