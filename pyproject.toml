@@ -10,6 +10,10 @@ package-mode = false
 python = "^3.9"
 opencv-python = "^4.9.0.80"
 pytest = "^8.1.1"
+jupyter = "^1.0.0"
+matplotlib = "^3.8.4"
+fargv = "^0.1.8"
+scipy = "^1.13.1"
 
 
 [build-system]
