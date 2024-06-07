@@ -188,18 +188,12 @@ def _get_inlier_count(src_points: np.array, dst_points: np.array, homography: np
     src_points = np.hstack((src_points, np.ones((src_points.shape[0], 1))))
     dst_points = np.hstack((dst_points, np.ones((dst_points.shape[0], 1))))
 
-
-
     # step 2: project the image points from image 1 to image 2 using the homography (1 line)
     # Hint: You can use np.dot here
     projected_points = np.dot(homography, src_points.T).T
 
-
-
     # step 3: re-normalize the projected points ([x, y, l] --> [x/l, y/l]) (1 line)
     projected_points = projected_points[:, :2] / projected_points[:, 2][:, None]
-
-
 
     # step 4: compute and return number of inliers (3 lines)
     distances = np.linalg.norm(projected_points - dst_points[:, :2], axis=1)
@@ -226,7 +220,7 @@ def ransac(src_features: Tuple[t_points, t_descriptors], dst_features: Tuple[t_p
     """
 
     # step 1: filter and align descriptors (1 line)
-
+    src_points, dst_points = filter_and_align_descriptors(src_features, dst_features, similarity_threshold)
 
     # step 2: initialize the optimization loop
     best_count = 0
@@ -236,18 +230,22 @@ def ransac(src_features: Tuple[t_points, t_descriptors], dst_features: Tuple[t_p
     for n in range(steps):
 
         # step a: select random subset of points (at least 4 points) (2 lines)
-        pass
-
+        random_indices = np.random.choice(src_points.shape[0], n_points, replace=False)
+        random_src_points = src_points[random_indices]
         # step b: compute homography for the random points (1 line)
-
+        homography = compute_homography(random_src_points, dst_points[random_indices])
 
         # step c: compare the current homography to the current best homography and update the best homography using
         # inlier count (4 lines)
+        inlier_count = _get_inlier_count(src_points, dst_points, homography, distance_threshold)
+        if inlier_count > best_count:
+            best_count = inlier_count
+            best_homography = homography
+
 
     print(f"After {steps:4} steps: {best_count} RANSAC points match!")
 
     # step 4: return the best homography
-    raise NotImplementedError
     return best_homography
 
 
@@ -333,12 +331,11 @@ def translate_homographies(homographies: t_homographies, dx: float, dy: float):
         a copy of the homographies dict which maps the same keys to the translated matrices.
     """
     # step 1: create a translation matrix (3 lines)
+    translation_matrix = np.array([[1, 0, dx], [0, 1, dy], [0, 0, 1]])
 
 
     # step 2: apply translation matrix on every homography matrix (2 lines)
-
-
-    raise NotImplementedError
+    return {k: np.dot(translation_matrix, v) for k, v in homographies.items()}
 
 
 def stitch_panorama(images: t_images, homographies: t_homographies, output_size: Tuple[int, int],
