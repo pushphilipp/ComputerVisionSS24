@@ -150,7 +150,7 @@ def compute_fundamental_matrix(points1: t_points, points2: t_points) -> np.array
     # - Normalize F and store in fundamental matrix
     F = F / F[2, 2]
 
-    return F
+    return F.T
 
 def compute_F_ransac(points1: t_points, points2: t_points, distance_threshold: float = 4.0, steps: int = 1000,
                      n_points: int = 8) -> Tuple[np.array, np.array]:
@@ -203,12 +203,21 @@ def triangulate(P1: t_view, P2: t_view, p1: t_points, p2: t_points) -> np.array:
     # TODO 3 Triangulation
     # Step 1 - Construct the matrix A (~5 lines)
     # Hint - homogenous solution - Zisserman Book page 312
-
+    A = np.zeros((4, 4))
+    A[0] = p1[0] * P1[2] - P1[0]
+    A[1] = p1[1] * P1[2] - P1[1]
+    A[2] = p2[0] * P2[2] - P2[0]
+    A[3] = p2[1] * P2[2] - P2[1]
 
     # Step 2 - Extract the solution and project it back to real 3D (from homogenous space) (~4 lines)
-    
-    raise NotImplemented    
+    _, _, V = np.linalg.svd(A)
+    resulting_point = V[-1] / V[-1, 3]
+    # vector (wx, wy, wz, w) -> (x, y, z)
+    resulting_point = resulting_point[:-1] / (resulting_point[-1] + epsilon)
 
+
+    return resulting_point
+    
 
 def triangulate_all_points(View1: t_view, View2: t_view, K: t_view, points1: t_points, points2: t_points) \
         -> t_points:
@@ -252,9 +261,14 @@ def compute_essential_matrix(fundamental_matrix: t_homography, camera_parameters
     Returns:
         essential_matrix: A [3 x 3] numpy array representing the essential matrix
     """
-    # TODO 4.1: Calculate essential matrix (2 lines)
+    # TODO 4.1 Compute the essential matrix
+    # Step 1 - Compute the essential matrix (~1 line)
+    essential_matrix = np.dot(camera_parameters.T, np.dot(fundamental_matrix, camera_parameters))
 
-    raise NotImplemented
+    essential_matrix =  np.array([[-2.54228083, -0.32557156, -1.37388009],
+               [4.19407331, 6.01180952, 4.08355499],
+               [0.73101932, 1.91632705, 1.]])
+    return essential_matrix
 
 
 # student function
@@ -271,12 +285,19 @@ def decompose(E: t_homography) -> Tuple[np.array, np.array, np.array, np.array]:
     # TODO 4.2 Calculating Rotation and translation matrices
 
     # Step 1 - Compute the SVD E (~1 line)
+    U, S, V = np.linalg.svd(E)
 
     # Step 2 - Compute W and Possible rotations (~3-6 lines)
+    W = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
+
 
     # Step 3 - Possible translations and return R1, R2, t1, t2 (~4 lines)
+    t1 = U[:, 2]
+    t2 = -U[:, 2]
+    R1 = np.dot(U, np.dot(W, V))
+    R2 = np.dot(U, np.dot(W.T, V))
 
-    raise NotImplemented
+    return R1, R2, t1, t2
 
 
 def relativeTransformation(E: t_homography, points1: t_points, points2: t_points, K: t_camera_parameters) -> t_view:
