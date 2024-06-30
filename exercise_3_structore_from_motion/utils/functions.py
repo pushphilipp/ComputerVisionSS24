@@ -90,17 +90,26 @@ def inliers_epipolar_constraint(p1: t_points, p2: t_points, F:t_homography, dist
         An array of indices of the points that satisfy the epipolar constraint.
     """
     ## TODO 2.1 Find inliers (points that satisfy epipolar constraint) and  return their indices
+
     # Step 1 - Convert points p1 and p2 from 2D to (2+1)D homogenous coordinates - [x, y] --> [x, y, 1] (2 lines)
+    ones = np.ones((p1.shape[0], 1))
+    p1 = np.hstack((p1, ones))
+    p2 = np.hstack((p2, ones))
 
     # Step 2 - Compute the epipolar lines (1 line)
-
+    lines = np.dot(F, p1.T).T
     # Step 3 - Normalize the epipolar lines (1 ~ 2 lines)
+    lines = lines / np.linalg.norm(lines[:, :2], axis=1)[:, None]
 
     # Step 4 - Compute the distances (1 line)
+    distances = np.dot(lines, p2.T)
+
 
     # Step 5 - Find inliers and return their indices (2 lines)
+    inliers = np.abs(distances) < distance_threshold
+    return np.where(inliers)[0]
 
-    raise NotImplemented
+
 
 
 # student function
@@ -120,16 +129,28 @@ def compute_fundamental_matrix(points1: t_points, points2: t_points) -> np.array
     A = np.ones((8, 9)).astype(int)
 
     # TODO 2.2 Construct the 8x9 matrix A.
+    A = np.zeros((8, 9))
+    for i in range(8):
+        A[i] = [points1[i, 0] * points2[i, 0], points1[i, 0] * points2[i, 1], points1[i, 0],
+                points1[i, 1] * points2[i, 0], points1[i, 1] * points2[i, 1], points1[i, 1],
+                points2[i, 0], points2[i, 1], 1]
 
-    # TODO 2.3 Solve Af = 0 and extract F using SVD
+    # TODO 2.3 Solve Af = 0 for f
+    # solve for f
+    _, _, V = np.linalg.svd(A)
+    F = V[-1].reshape(3, 3)
 
     # TODO 2.4 Enforce Rank(F) = 2
     # - Compute the SVD of F
+    U, S, V = np.linalg.svd(F)
     # - Set sigma3 to 0  (Hint: The singular values are stored as a vector in svd.w)
+    S[2] = 0
     # - Recompute F with the updated sigma
+    F = np.dot(U, np.dot(np.diag(S), V))
     # - Normalize F and store in fundamental matrix
+    F = F / F[2, 2]
 
-    raise NotImplemented
+    return F
 
 def compute_F_ransac(points1: t_points, points2: t_points, distance_threshold: float = 4.0, steps: int = 1000,
                      n_points: int = 8) -> Tuple[np.array, np.array]:
